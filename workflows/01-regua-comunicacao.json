@@ -1,0 +1,2897 @@
+{
+  "name": "Modulo 1 - Regua de Comunicacao (Schedule)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1312,
+        -256
+      ],
+      "id": "556fb33a-8c15-4a3d-8cd1-b3c111a69caf",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appSUA_BASE_AQUI",
+          "mode": "list",
+          "cachedResultName": "Gestão de Imóveis",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblRESERVAS_AQUI",
+          "mode": "list",
+          "cachedResultName": "Reservas TC",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI/tblRESERVAS_AQUI"
+        },
+        "options": {
+          "fields": []
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -1280,
+        0
+      ],
+      "id": "918a862f-3841-43bd-96aa-411231f382f1",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "SUA_CREDENCIAL_AIRTABLE",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://calendar.google.com/calendar/ical/en.brazilian%23holiday%40group.v.calendar.google.com/public/basic.ics",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -784,
+        -288
+      ],
+      "id": "c5df023c-d0f5-4145-9ff6-686d7d6797cf",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Função para converter datas no formato iCal (YYYYMMDD) para AAAA-MM-DD\nfunction parseICalDate(dateStr) {\n  if (!dateStr) return null;\n  // Remove hora se houver (ex: 20260810T150000Z -> 20260810)\n  const cleanDate = dateStr.split('T')[0];\n  if (cleanDate.length >= 8) {\n    const ano = cleanDate.substring(0, 4);\n    const mes = cleanDate.substring(4, 6);\n    const dia = cleanDate.substring(6, 8);\n    return `${ano}-${mes}-${dia}`;\n  }\n  return null;\n}\n\nconst results = [];\n\nfor (const item of $input.all()) {\n  const icalText = item.json.data || item.json.body || item.json.text || \"\";\n  \n  // Divide o arquivo iCal em eventos (VEVENT)\n  const events = icalText.split('BEGIN:VEVENT');\n  \n  for (let i = 1; i < events.length; i++) {\n    const event = events[i];\n    \n    const summaryMatch = event.match(/SUMMARY:(.*)/);\n    const dtstartMatch = event.match(/DTSTART(?:;VALUE=DATE)?:(\\d+)/);\n    const dtendMatch = event.match(/DTEND(?:;VALUE=DATE)?:(\\d+)/);\n    const uidMatch = event.match(/UID:(.*)/);\n\n    if (dtstartMatch && dtendMatch) {\n      results.push({\n        json: {\n          idReserva: uidMatch ? uidMatch[1].trim() : `ical-${Date.now()}-${i}`,\n          summary: summaryMatch ? summaryMatch[1].trim() : \"Bloqueio iCal\",\n          checkIn: parseICalDate(dtstartMatch[1]),\n          checkOut: parseICalDate(dtendMatch[1]),\n          plataforma: summaryMatch && summaryMatch[1].includes(\"Airbnb\") ? \"Airbnb\" : \"iCal / Outro\"\n        }\n      });\n    }\n  }\n}\n\nreturn results.slice(0, 5);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -592,
+        -288
+      ],
+      "id": "86f87e14-14be-4539-9ab9-cd9810f18fd6",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "appSUA_BASE_AQUI",
+          "mode": "list",
+          "cachedResultName": "Gestão de Imóveis",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblRESERVAS_AQUI",
+          "mode": "list",
+          "cachedResultName": "Reservas TC",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI/tblRESERVAS_AQUI"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "5 dias antes (msg check-in)": false,
+            "1 dia antes (msg check-in)": false,
+            "Boas Vindas (msg no dia)": false,
+            "No dia (msg check-out)": false,
+            "Valor Total": 0,
+            "ID da Reserva": "={{ $json.idReserva }}",
+            "Hóspede": "={{ $json.summary }}",
+            "Check-in": "={{ $json.checkIn }}",
+            "Check-out": "={{ $json.checkOut }}",
+            "Plataforma": "={{ $json.plataforma }}",
+            "Aviso Faxina (1 dia antes)": false
+          },
+          "matchingColumns": [
+            "ID da Reserva"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "ID da Reserva",
+              "displayName": "ID da Reserva",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Hóspede",
+              "displayName": "Hóspede",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Apartamento",
+              "displayName": "Apartamento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Plataforma",
+              "displayName": "Plataforma",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Airbnb",
+                  "value": "Airbnb"
+                },
+                {
+                  "name": "Booking",
+                  "value": "Booking"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Check-in",
+              "displayName": "Check-in",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Check-out",
+              "displayName": "Check-out",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Código Fechadura",
+              "displayName": "Código Fechadura",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Valor Total",
+              "displayName": "Valor Total",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status da Reserva",
+              "displayName": "Status da Reserva",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Confirmada",
+                  "value": "Confirmada"
+                },
+                {
+                  "name": "Cancelada",
+                  "value": "Cancelada"
+                },
+                {
+                  "name": "Concluida",
+                  "value": "Concluida"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status da Limpeza",
+              "displayName": "Status da Limpeza",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pendente",
+                  "value": "Pendente"
+                },
+                {
+                  "name": "Agendada",
+                  "value": "Agendada"
+                },
+                {
+                  "name": "Concluida",
+                  "value": "Concluida"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Nome do Imóvel (from Apartamento)",
+              "displayName": "Nome do Imóvel (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link iCal Airbnb (from Apartamento)",
+              "displayName": "Link iCal Airbnb (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link iCal Booking (from Apartamento)",
+              "displayName": "Link iCal Booking (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Endereço Completo (from Apartamento)",
+              "displayName": "Endereço Completo (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link WAZE (from Apartamento)",
+              "displayName": "Link WAZE (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Instruções de Acesso (from Apartamento)",
+              "displayName": "Instruções de Acesso (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link Guia PDF (from Apartamento)",
+              "displayName": "Link Guia PDF (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Horário Checkout (from Apartamento)",
+              "displayName": "Horário Checkout (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Confirmação de Reserva (msg no dia)",
+              "displayName": "Confirmação de Reserva (msg no dia)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "5 dias antes (msg check-in)",
+              "displayName": "5 dias antes (msg check-in)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "1 dia antes (msg check-in)",
+              "displayName": "1 dia antes (msg check-in)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Boas Vindas (msg no dia)",
+              "displayName": "Boas Vindas (msg no dia)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Aviso Faxina (1 dia antes)",
+              "displayName": "Aviso Faxina (1 dia antes)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "No dia (msg check-out)",
+              "displayName": "No dia (msg check-out)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -352,
+        -288
+      ],
+      "id": "26d64e53-2e6c-4084-ac2d-d2dcfdfac549",
+      "name": "Create or update a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "SUA_CREDENCIAL_AIRTABLE",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function parseDateUTC(dateStr) {\n  if (!dateStr) return null;\n  const cleanStr = String(dateStr).substring(0, 10);\n  const [year, month, day] = cleanStr.split('-').map(Number);\n  return new Date(Date.UTC(year, month - 1, day));\n}\n\n// formata data pt-BR (ex: \"22 de agosto\")\nfunction dataBonita(d) {\n  if (!d) return \"\";\n  const meses = [\"janeiro\",\"fevereiro\",\"março\",\"abril\",\"maio\",\"junho\",\"julho\",\"agosto\",\"setembro\",\"outubro\",\"novembro\",\"dezembro\"];\n  return `${d.getUTCDate()} de ${meses[d.getUTCMonth()]}`;\n}\n\nconst now = new Date();\nconst today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));\n\nfor (const item of $input.all()) {\n  const fields = item.json.fields || item.json;\n\n  // 🛑 TRAVA DE SEGURANÇA: Se a reserva estiver cancelada, ignora\n  if (fields['Status da Reserva'] === 'Cancelada') {\n    continue;\n  }\n\n  if (!fields['Check-in'] || !fields['Check-out']) {\n    continue;\n  }\n\n  const checkIn = parseDateUTC(fields['Check-in']);\n  const checkOut = parseDateUTC(fields['Check-out']);\n\n  const diffCheckInDays = Math.round((checkIn - today) / (1000 * 60 * 60 * 24));\n  const diffCheckOutDays = Math.round((checkOut - today) / (1000 * 60 * 60 * 24));\n\n  item.json.diasParaCheckIn = diffCheckInDays;\n  item.json.diasParaCheckOut = diffCheckOutDays;\n\n  // datas formatadas bonitinho\n  item.json.checkInFormatado = dataBonita(checkIn);\n  item.json.checkOutFormatado = dataBonita(checkOut);\n\n  let msgType = null;\n  let checkboxField = null;\n\n  // REGRAS DAS MENSAGENS:\n  if (diffCheckInDays === 5 && !fields['5 dias antes (msg check-in)']) {\n    msgType = '5_DIAS';\n    checkboxField = '5 dias antes (msg check-in)';\n  } else if (diffCheckInDays === 1 && !fields['1 dia antes (msg check-in)']) {\n    msgType = '1_DIA';\n    checkboxField = '1 dia antes (msg check-in)';\n  } else if (diffCheckInDays === 0 && !fields['Boas Vindas (msg no dia)']) {\n    msgType = 'BOAS_VINDAS';\n    checkboxField = 'Boas Vindas (msg no dia)';\n  } else if (diffCheckOutDays === 1 && !fields['Aviso Faxina (1 dia antes)']) {\n    msgType = 'FAXINA_1_DIA';\n    checkboxField = 'Aviso Faxina (1 dia antes)';\n  } else if (diffCheckOutDays === 0 && !fields['No dia (msg check-out)']) {\n    msgType = 'CHECKOUT';\n    checkboxField = 'No dia (msg check-out)';\n  }\n\n  item.json.msgType = msgType;\n  item.json.checkboxField = checkboxField;\n}\n\nreturn $input.all().filter(item => item.json.msgType !== null);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1088,
+        0
+      ],
+      "id": "02053d95-d39f-4039-83e3-efbf8c9c0f6d",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.msgType }}",
+                    "rightValue": "5_DIAS",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f25002ac-c930-4b22-af53-13dda13d94de"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9aeee6de-2d3f-438a-b7f6-d6b02f11e9f9",
+                    "leftValue": "={{ $json.msgType }}",
+                    "rightValue": "1_DIA",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e9966fb7-c498-4c7d-a004-0fc47c272907",
+                    "leftValue": "={{ $json.msgType }}",
+                    "rightValue": "BOAS_VINDAS",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e9ab749f-2df7-4ccf-8934-0c23343aa487",
+                    "leftValue": "={{ $json.msgType }}",
+                    "rightValue": "CHECKOUT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c38b8272-93eb-4bfa-b099-4c44d587b9e3",
+                    "leftValue": "={{ $json.msgType }}",
+                    "rightValue": "FAXINA_1_DIA",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -1088,
+        160
+      ],
+      "id": "f270205d-8ca6-4656-b64e-e96683741669",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8080/message/sendText/Imoveis-zap",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SUA_EVOLUTION_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"55{{ $json.fields.Telefone.replace(/\\\\D/g, '') }}\",\n  \"options\": { \"delay\": 1200, \"presence\": \"composing\", \"linkPreview\": false },\n  \"textMessage\": {\n    \"text\": \"Olá {{ $json.fields.Hóspede }}! 🗓️ Faltam apenas 5 dias para o seu check-in no {{ $json.fields['Nome do Imóvel (from Apartamento)'][0] }}!\\n\\nJá estamos preparando tudo para sua chegada. Seguem as informações de localização do seu imóvel:\\n\\n📍 Endereço: {{ $json.fields['Endereço Completo (from Apartamento)'][0] }}\\n🗺️ Link Waze: {{ $json.fields['Link WAZE (from Apartamento)'][0] }}\\n\\n📋 Liberação na Portaria: Para autorizarmos a entrada da sua equipe/família no condomínio, precisamos que nos envie por aqui os dados dos ocupantes:\\n• Nome completo e CPF de todos os hóspedes.\\n\\nAssim que nos enviar, deixaremos tudo liberado na portaria!\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -800,
+        -96
+      ],
+      "id": "d4098a75-7af4-4a35-95ba-d71471cfbc20",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8080/message/sendText/Imoveis-zap",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SUA_EVOLUTION_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"55{{ $json.fields.Telefone.replace(/\\\\D/g, '') }}\",\n  \"options\": { \"delay\": 1200, \"presence\": \"composing\", \"linkPreview\": false },\n  \"textMessage\": {\n    \"text\": \"Olá, {{ $json.fields.Hóspede }}! Tudo pronto para o seu check-in amanhã? 🏠\\n\\nSeguem os dados essenciais para sua chegada:\\n\\n🔐 Instruções de Acesso: {{ $json.fields['Instruções de Acesso (from Apartamento)'][0] }}\\n🔢 Código da Fechadura Eletrônica: {{ $json.fields['Código Fechadura'] }}\\n(Este código estará ativo a partir do horário oficial do seu check-in).\\n\\n📶 Wi-Fi:\\n• Rede: {{ $json.fields['Rede WiFi (from Apartamento)'][0] }}\\n• Senha: {{ $json.fields['Senha WiFi (from Apartamento)'][0] }}\\n\\nTenha uma excelente viagem e até amanhã!\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -800,
+        32
+      ],
+      "id": "ba4cd3e1-3458-424a-b65a-3f2091ddba9d",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8080/message/sendText/Imoveis-zap",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SUA_EVOLUTION_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"55{{ $json.fields.Telefone.replace(/\\\\D/g, '') }}\",\n  \"options\": { \"delay\": 1200, \"presence\": \"composing\", \"linkPreview\": false },\n  \"textMessage\": {\n    \"text\": \"Olá, {{ $json.fields.Hóspede }}! Desejamos um excelente check-in! 🔑\\n\\nDeu tudo certo com sua entrada no {{ $json.fields['Nome do Imóvel (from Apartamento)'][0] }}? Se precisar de qualquer ajuda com a casa ou a internet, basta mandar uma mensagem por aqui.\\n\\nLembrete da senha do Wi-Fi: {{ $json.fields['Senha WiFi (from Apartamento)'][0] }}\\n\\nAproveite sua estadia!\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -800,
+        160
+      ],
+      "id": "564b3296-3ec3-403f-a426-1e0b74b06efa",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8080/message/sendText/Imoveis-zap",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SUA_EVOLUTION_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"55{{ $json.fields.Telefone.replace(/\\\\D/g, '') }}\",\n  \"options\": { \"delay\": 1200, \"presence\": \"composing\", \"linkPreview\": false },\n  \"textMessage\": {\n    \"text\": \"Olá, {{ $json.fields.Hóspede }}! Esperamos que sua estadia tenha sido incrível! 🌟\\n\\nLembrete: o horário do nosso check-out é até as {{ $json.fields['Horário Checkout (from Apartamento)'][0] }}.\\n\\n📋 Check-list rápido de saída:\\n• Apague as luzes e desligue o ar-condicionado.\\n• Feche as janelas e tranque a porta ao sair.\\n\\n⭐ Sua opinião é fundamental para nós! Se a sua experiência foi positiva, nos ajudaria imensamente se pudesse nos avaliar com 5 estrelas na plataforma de reserva. Caso tenha algo que possamos melhorar, pode nos responder diretamente por aqui!\\n\\nTenha um ótimo retorno para casa e até a próxima!\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -800,
+        272
+      ],
+      "id": "ef4fceee-bc0b-4e3b-9a0f-47f901894242",
+      "name": "HTTP Request4"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appSUA_BASE_AQUI",
+          "mode": "list",
+          "cachedResultName": "Gestão de Imóveis",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblRESERVAS_AQUI",
+          "mode": "list",
+          "cachedResultName": "Reservas TC",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI/tblRESERVAS_AQUI"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "5 dias antes (msg check-in)": true,
+            "1 dia antes (msg check-in)": false,
+            "Boas Vindas (msg no dia)": false,
+            "No dia (msg check-out)": false,
+            "Valor Total": 0,
+            "id": "={{ $(\"Code in JavaScript2\").item.json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "ID da Reserva",
+              "displayName": "ID da Reserva",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Hóspede",
+              "displayName": "Hóspede",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Apartamento",
+              "displayName": "Apartamento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Plataforma",
+              "displayName": "Plataforma",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Airbnb",
+                  "value": "Airbnb"
+                },
+                {
+                  "name": "Booking",
+                  "value": "Booking"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Check-in",
+              "displayName": "Check-in",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Check-out",
+              "displayName": "Check-out",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Código Fechadura",
+              "displayName": "Código Fechadura",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Valor Total",
+              "displayName": "Valor Total",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status da Reserva",
+              "displayName": "Status da Reserva",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Confirmada",
+                  "value": "Confirmada"
+                },
+                {
+                  "name": "Cancelada",
+                  "value": "Cancelada"
+                },
+                {
+                  "name": "Concluida",
+                  "value": "Concluida"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status da Limpeza",
+              "displayName": "Status da Limpeza",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pendente",
+                  "value": "Pendente"
+                },
+                {
+                  "name": "Agendada",
+                  "value": "Agendada"
+                },
+                {
+                  "name": "Concluida",
+                  "value": "Concluida"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Nome do Imóvel (from Apartamento)",
+              "displayName": "Nome do Imóvel (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link iCal Airbnb (from Apartamento)",
+              "displayName": "Link iCal Airbnb (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link iCal Booking (from Apartamento)",
+              "displayName": "Link iCal Booking (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Endereço Completo (from Apartamento)",
+              "displayName": "Endereço Completo (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link WAZE (from Apartamento)",
+              "displayName": "Link WAZE (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Instruções de Acesso (from Apartamento)",
+              "displayName": "Instruções de Acesso (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link Guia PDF (from Apartamento)",
+              "displayName": "Link Guia PDF (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Horário Checkout (from Apartamento)",
+              "displayName": "Horário Checkout (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Confirmação de Reserva (msg no dia)",
+              "displayName": "Confirmação de Reserva (msg no dia)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "5 dias antes (msg check-in)",
+              "displayName": "5 dias antes (msg check-in)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "1 dia antes (msg check-in)",
+              "displayName": "1 dia antes (msg check-in)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Boas Vindas (msg no dia)",
+              "displayName": "Boas Vindas (msg no dia)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Aviso Faxina (1 dia antes)",
+              "displayName": "Aviso Faxina (1 dia antes)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "No dia (msg check-out)",
+              "displayName": "No dia (msg check-out)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -576,
+        -128
+      ],
+      "id": "92b52724-9656-4eb9-91c4-e6d95ef6f27a",
+      "name": "5 dias antes (msg check-in)",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "SUA_CREDENCIAL_AIRTABLE",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appSUA_BASE_AQUI",
+          "mode": "list",
+          "cachedResultName": "Gestão de Imóveis",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblRESERVAS_AQUI",
+          "mode": "list",
+          "cachedResultName": "Reservas TC",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI/tblRESERVAS_AQUI"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "5 dias antes (msg check-in)": false,
+            "1 dia antes (msg check-in)": true,
+            "Boas Vindas (msg no dia)": false,
+            "No dia (msg check-out)": false,
+            "Valor Total": 0,
+            "id": "={{ $(\"Code in JavaScript2\").item.json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "ID da Reserva",
+              "displayName": "ID da Reserva",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Hóspede",
+              "displayName": "Hóspede",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Apartamento",
+              "displayName": "Apartamento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Plataforma",
+              "displayName": "Plataforma",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Airbnb",
+                  "value": "Airbnb"
+                },
+                {
+                  "name": "Booking",
+                  "value": "Booking"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Check-in",
+              "displayName": "Check-in",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Check-out",
+              "displayName": "Check-out",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Código Fechadura",
+              "displayName": "Código Fechadura",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Valor Total",
+              "displayName": "Valor Total",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status da Reserva",
+              "displayName": "Status da Reserva",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Confirmada",
+                  "value": "Confirmada"
+                },
+                {
+                  "name": "Cancelada",
+                  "value": "Cancelada"
+                },
+                {
+                  "name": "Concluida",
+                  "value": "Concluida"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status da Limpeza",
+              "displayName": "Status da Limpeza",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pendente",
+                  "value": "Pendente"
+                },
+                {
+                  "name": "Agendada",
+                  "value": "Agendada"
+                },
+                {
+                  "name": "Concluida",
+                  "value": "Concluida"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Nome do Imóvel (from Apartamento)",
+              "displayName": "Nome do Imóvel (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link iCal Airbnb (from Apartamento)",
+              "displayName": "Link iCal Airbnb (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link iCal Booking (from Apartamento)",
+              "displayName": "Link iCal Booking (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Endereço Completo (from Apartamento)",
+              "displayName": "Endereço Completo (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link WAZE (from Apartamento)",
+              "displayName": "Link WAZE (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Instruções de Acesso (from Apartamento)",
+              "displayName": "Instruções de Acesso (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link Guia PDF (from Apartamento)",
+              "displayName": "Link Guia PDF (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Horário Checkout (from Apartamento)",
+              "displayName": "Horário Checkout (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Confirmação de Reserva (msg no dia)",
+              "displayName": "Confirmação de Reserva (msg no dia)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "5 dias antes (msg check-in)",
+              "displayName": "5 dias antes (msg check-in)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "1 dia antes (msg check-in)",
+              "displayName": "1 dia antes (msg check-in)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Boas Vindas (msg no dia)",
+              "displayName": "Boas Vindas (msg no dia)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Aviso Faxina (1 dia antes)",
+              "displayName": "Aviso Faxina (1 dia antes)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "No dia (msg check-out)",
+              "displayName": "No dia (msg check-out)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -576,
+        32
+      ],
+      "id": "89a103db-b23c-4fae-9165-edebeaa0243a",
+      "name": "1 dia antes (msg check-in)",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "SUA_CREDENCIAL_AIRTABLE",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appSUA_BASE_AQUI",
+          "mode": "list",
+          "cachedResultName": "Gestão de Imóveis",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblRESERVAS_AQUI",
+          "mode": "list",
+          "cachedResultName": "Reservas TC",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI/tblRESERVAS_AQUI"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "5 dias antes (msg check-in)": false,
+            "1 dia antes (msg check-in)": false,
+            "Boas Vindas (msg no dia)": true,
+            "No dia (msg check-out)": false,
+            "Valor Total": 0,
+            "id": "={{ $(\"Code in JavaScript2\").item.json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "ID da Reserva",
+              "displayName": "ID da Reserva",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Hóspede",
+              "displayName": "Hóspede",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Apartamento",
+              "displayName": "Apartamento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Plataforma",
+              "displayName": "Plataforma",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Airbnb",
+                  "value": "Airbnb"
+                },
+                {
+                  "name": "Booking",
+                  "value": "Booking"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Check-in",
+              "displayName": "Check-in",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Check-out",
+              "displayName": "Check-out",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Código Fechadura",
+              "displayName": "Código Fechadura",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Valor Total",
+              "displayName": "Valor Total",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status da Reserva",
+              "displayName": "Status da Reserva",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Confirmada",
+                  "value": "Confirmada"
+                },
+                {
+                  "name": "Cancelada",
+                  "value": "Cancelada"
+                },
+                {
+                  "name": "Concluida",
+                  "value": "Concluida"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status da Limpeza",
+              "displayName": "Status da Limpeza",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pendente",
+                  "value": "Pendente"
+                },
+                {
+                  "name": "Agendada",
+                  "value": "Agendada"
+                },
+                {
+                  "name": "Concluida",
+                  "value": "Concluida"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Nome do Imóvel (from Apartamento)",
+              "displayName": "Nome do Imóvel (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link iCal Airbnb (from Apartamento)",
+              "displayName": "Link iCal Airbnb (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link iCal Booking (from Apartamento)",
+              "displayName": "Link iCal Booking (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Endereço Completo (from Apartamento)",
+              "displayName": "Endereço Completo (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link WAZE (from Apartamento)",
+              "displayName": "Link WAZE (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Instruções de Acesso (from Apartamento)",
+              "displayName": "Instruções de Acesso (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link Guia PDF (from Apartamento)",
+              "displayName": "Link Guia PDF (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Horário Checkout (from Apartamento)",
+              "displayName": "Horário Checkout (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Confirmação de Reserva (msg no dia)",
+              "displayName": "Confirmação de Reserva (msg no dia)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "5 dias antes (msg check-in)",
+              "displayName": "5 dias antes (msg check-in)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "1 dia antes (msg check-in)",
+              "displayName": "1 dia antes (msg check-in)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Boas Vindas (msg no dia)",
+              "displayName": "Boas Vindas (msg no dia)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Aviso Faxina (1 dia antes)",
+              "displayName": "Aviso Faxina (1 dia antes)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "No dia (msg check-out)",
+              "displayName": "No dia (msg check-out)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -576,
+        176
+      ],
+      "id": "bc71bab1-61fd-4f5e-bf54-17056922dc55",
+      "name": "Boas Vindas (msg no dia)",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "SUA_CREDENCIAL_AIRTABLE",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appSUA_BASE_AQUI",
+          "mode": "list",
+          "cachedResultName": "Gestão de Imóveis",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblRESERVAS_AQUI",
+          "mode": "list",
+          "cachedResultName": "Reservas TC",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI/tblRESERVAS_AQUI"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "5 dias antes (msg check-in)": false,
+            "1 dia antes (msg check-in)": false,
+            "Boas Vindas (msg no dia)": false,
+            "No dia (msg check-out)": true,
+            "Valor Total": 0,
+            "id": "={{ $(\"Code in JavaScript2\").item.json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "ID da Reserva",
+              "displayName": "ID da Reserva",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Hóspede",
+              "displayName": "Hóspede",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Apartamento",
+              "displayName": "Apartamento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Plataforma",
+              "displayName": "Plataforma",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Airbnb",
+                  "value": "Airbnb"
+                },
+                {
+                  "name": "Booking",
+                  "value": "Booking"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Check-in",
+              "displayName": "Check-in",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Check-out",
+              "displayName": "Check-out",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Código Fechadura",
+              "displayName": "Código Fechadura",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Valor Total",
+              "displayName": "Valor Total",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status da Reserva",
+              "displayName": "Status da Reserva",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Confirmada",
+                  "value": "Confirmada"
+                },
+                {
+                  "name": "Cancelada",
+                  "value": "Cancelada"
+                },
+                {
+                  "name": "Concluida",
+                  "value": "Concluida"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status da Limpeza",
+              "displayName": "Status da Limpeza",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pendente",
+                  "value": "Pendente"
+                },
+                {
+                  "name": "Agendada",
+                  "value": "Agendada"
+                },
+                {
+                  "name": "Concluida",
+                  "value": "Concluida"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Nome do Imóvel (from Apartamento)",
+              "displayName": "Nome do Imóvel (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link iCal Airbnb (from Apartamento)",
+              "displayName": "Link iCal Airbnb (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link iCal Booking (from Apartamento)",
+              "displayName": "Link iCal Booking (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Endereço Completo (from Apartamento)",
+              "displayName": "Endereço Completo (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link WAZE (from Apartamento)",
+              "displayName": "Link WAZE (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Instruções de Acesso (from Apartamento)",
+              "displayName": "Instruções de Acesso (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link Guia PDF (from Apartamento)",
+              "displayName": "Link Guia PDF (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Horário Checkout (from Apartamento)",
+              "displayName": "Horário Checkout (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Confirmação de Reserva (msg no dia)",
+              "displayName": "Confirmação de Reserva (msg no dia)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "5 dias antes (msg check-in)",
+              "displayName": "5 dias antes (msg check-in)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "1 dia antes (msg check-in)",
+              "displayName": "1 dia antes (msg check-in)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Boas Vindas (msg no dia)",
+              "displayName": "Boas Vindas (msg no dia)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Aviso Faxina (1 dia antes)",
+              "displayName": "Aviso Faxina (1 dia antes)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "No dia (msg check-out)",
+              "displayName": "No dia (msg check-out)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -576,
+        336
+      ],
+      "id": "72d4993b-7877-4ea0-b753-e87fc067c00e",
+      "name": "No dia (msg check-out)",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "SUA_CREDENCIAL_AIRTABLE",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appSUA_BASE_AQUI",
+          "mode": "list",
+          "cachedResultName": "Gestão de Imóveis",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblIMOVEIS_AQUI",
+          "mode": "list",
+          "cachedResultName": "Imóveis TC",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI/tblIMOVEIS_AQUI"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -976,
+        -288
+      ],
+      "id": "da2bd526-3dab-469b-9a97-376a6fbe67af",
+      "name": "Search records1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "SUA_CREDENCIAL_AIRTABLE",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8080/message/sendText/Imoveis-zap",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SUA_EVOLUTION_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"SEU_NUMERO_WHATSAPP\",\n  \"options\": { \"delay\": 1200, \"presence\": \"composing\", \"linkPreview\": false },\n  \"textMessage\": {\n    \"text\": \"Olá! Lembrete de limpeza agendada para amanhã:\\n\\n🏠 Imóvel: {{ $json.fields['Nome do Imóvel (from Apartamento)'][0] }}\\n📍 Endereço: {{ $json.fields['Endereço Completo (from Apartamento)'][0] }}\\n⏰ Horário do Check-out: {{ $json.fields['Horário Checkout (from Apartamento)'][0] }}\\n\\nAssim que finalizar a limpeza, por favor clique no link abaixo para confirmar a conclusão:\\n🔗 https://airtable.com/appSUA_BASE_AQUI/pagSEU_FORMULARIO/form\\n\\nPor favor, confirme o recebimento desta mensagem!\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -800,
+        432
+      ],
+      "id": "79903b7f-1440-41c8-8f8e-7e09577214b5",
+      "name": "HTTP Request5"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appSUA_BASE_AQUI",
+          "mode": "list",
+          "cachedResultName": "Gestão de Imóveis",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblRESERVAS_AQUI",
+          "mode": "list",
+          "cachedResultName": "Reservas TC",
+          "cachedResultUrl": "https://airtable.com/appSUA_BASE_AQUI/tblRESERVAS_AQUI"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "5 dias antes (msg check-in)": false,
+            "1 dia antes (msg check-in)": false,
+            "Boas Vindas (msg no dia)": false,
+            "No dia (msg check-out)": false,
+            "Valor Total": 0,
+            "id": "={{ $(\"Code in JavaScript2\").item.json.id }}",
+            "Status da Limpeza": "Pendente"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "ID da Reserva",
+              "displayName": "ID da Reserva",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Hóspede",
+              "displayName": "Hóspede",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Apartamento",
+              "displayName": "Apartamento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Plataforma",
+              "displayName": "Plataforma",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Airbnb",
+                  "value": "Airbnb"
+                },
+                {
+                  "name": "Booking",
+                  "value": "Booking"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Check-in",
+              "displayName": "Check-in",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Check-out",
+              "displayName": "Check-out",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Código Fechadura",
+              "displayName": "Código Fechadura",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Valor Total",
+              "displayName": "Valor Total",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status da Reserva",
+              "displayName": "Status da Reserva",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Confirmada",
+                  "value": "Confirmada"
+                },
+                {
+                  "name": "Cancelada",
+                  "value": "Cancelada"
+                },
+                {
+                  "name": "Concluida",
+                  "value": "Concluida"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status da Limpeza",
+              "displayName": "Status da Limpeza",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pendente",
+                  "value": "Pendente"
+                },
+                {
+                  "name": "Agendada",
+                  "value": "Agendada"
+                },
+                {
+                  "name": "Concluida",
+                  "value": "Concluida"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Nome do Imóvel (from Apartamento)",
+              "displayName": "Nome do Imóvel (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link iCal Airbnb (from Apartamento)",
+              "displayName": "Link iCal Airbnb (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link iCal Booking (from Apartamento)",
+              "displayName": "Link iCal Booking (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Endereço Completo (from Apartamento)",
+              "displayName": "Endereço Completo (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link WAZE (from Apartamento)",
+              "displayName": "Link WAZE (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Instruções de Acesso (from Apartamento)",
+              "displayName": "Instruções de Acesso (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Link Guia PDF (from Apartamento)",
+              "displayName": "Link Guia PDF (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Horário Checkout (from Apartamento)",
+              "displayName": "Horário Checkout (from Apartamento)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Confirmação de Reserva (msg no dia)",
+              "displayName": "Confirmação de Reserva (msg no dia)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "5 dias antes (msg check-in)",
+              "displayName": "5 dias antes (msg check-in)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "1 dia antes (msg check-in)",
+              "displayName": "1 dia antes (msg check-in)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Boas Vindas (msg no dia)",
+              "displayName": "Boas Vindas (msg no dia)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Aviso Faxina (1 dia antes)",
+              "displayName": "Aviso Faxina (1 dia antes)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "No dia (msg check-out)",
+              "displayName": "No dia (msg check-out)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -576,
+        464
+      ],
+      "id": "29602d45-6af5-4ac5-8649-a72f92d14560",
+      "name": "Um dia antes (checkout faxina)",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "SUA_CREDENCIAL_AIRTABLE",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "CALENDARIO",
+        "height": 80,
+        "width": 150,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        -288
+      ],
+      "id": "4cd8c457-6f6e-4f27-abf7-f6a42744d864",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "WHATSAPP mensagens checkin/out",
+        "height": 80,
+        "width": 150,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1248,
+        224
+      ],
+      "id": "3db95202-c9c9-4ef3-ace3-249f9c894981",
+      "name": "Sticky Note3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Search records1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create or update a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create or update a record": {
+      "main": [
+        []
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "5 dias antes (msg check-in)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "1 dia antes (msg check-in)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "Boas Vindas (msg no dia)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request4": {
+      "main": [
+        [
+          {
+            "node": "No dia (msg check-out)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request5": {
+      "main": [
+        [
+          {
+            "node": "Um dia antes (checkout faxina)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "lTqRvuLjEYMY8CxD",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "db22b77af1e908916c972291f41df53e82c95652d6cd6fbda407c0789bd98956"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

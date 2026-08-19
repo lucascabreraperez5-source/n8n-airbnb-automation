@@ -1,0 +1,72 @@
+{
+  "name": "Modulo 3 - Alerta de Erro Global",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "7a43df24-b5f7-46a4-834d-25fbe1d44514",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8080/message/sendText/Imoveis-zap",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SUA_EVOLUTION_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"SEU_NUMERO_WHATSAPP\",\n  \"textMessage\": {\n    \"text\": \"🚨 ERRO NO N8N\\nWorkflow: {{ $json.workflow.name }}\\nNó: {{ $json.execution.lastNodeExecuted }}\\nErro: {{ $json.execution.error.message }}\\nLink: {{ $json.execution.url }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        192,
+        0
+      ],
+      "id": "cfbfde56-99b3-4d4d-ae17-e7fbeb6fdcc1",
+      "name": "HTTP Request Cliente"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "meta": {
+    "instanceId": "db22b77af1e908916c972291f41df53e82c95652d6cd6fbda407c0789bd98956"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
