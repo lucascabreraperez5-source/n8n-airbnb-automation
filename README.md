@@ -9,6 +9,10 @@ took the daily admin from around **4 hours down to about 1**.
 It's a low-cost setup that replaces paid channel managers and pricing tools for
 short-term rental hosts.
 
+<img width="739" height="1600" alt="WhatsApp Image 2026-08-19 at 19 10 49" src="https://github.com/user-attachments/assets/40f3d2f9-7c40-4f0d-9e25-05c5b61e72b9" />
+
+*A check-in message the system sends on its own, 5 days before arrival.*
+
 🇧🇷 **Versão em português mais abaixo** ⬇️ · [Ir para o português](#-automação-de-aluguéis-de-temporada-airbnb--booking)
 
 ---
@@ -27,8 +31,8 @@ accidental: a daily schedule, an incoming webhook, an error handler and an email
 reader are four different jobs, and keeping them apart makes each one easy to
 test and fix without touching the others.
 
-<!-- 📸 TODO: trocar pela imagem real do canvas do n8n -->
-![Architecture overview](images/architecture.png)
+<img width="954" height="415" alt="architecture" src="https://github.com/user-attachments/assets/286d58cb-10be-4c05-97e3-fc35188c5a40" />
+
 
 | Workflow file | Module | Trigger | Status |
 |---|---|---|---|
@@ -68,10 +72,14 @@ the contact as confirmed.
 - If a message has no valid code, it gets an automatic "please resend" reply instead of crashing the flow
 - WhatsApp now masks the real number of unknown contacts, so I read the number from the message body itself (opt-in)
 
+<img width="1158" height="380" alt="module-2-whatsapp" src="https://github.com/user-attachments/assets/ea656e5f-41a9-4f62-8b08-8575414ef65f" />
+
 ### Module 3: Global error alerting ✅
 If any workflow breaks, I get a WhatsApp within seconds with the workflow name,
 the node that failed, the error message and a link to the exact run. No more
 finding out three days later that messages quietly stopped going out.
+
+<img width="666" height="284" alt="module-3-error" src="https://github.com/user-attachments/assets/7d6f1763-6330-43b9-868c-5fa5ae94b32f" />
 
 ### Module 4: Email → booking parser 🚧
 Reads the inbox over IMAP and creates bookings in Airtable straight from the
@@ -134,7 +142,9 @@ handling and idempotency.
 
 Freelance n8n automation, focused on WhatsApp integrations, REST APIs and
 Airtable.
-<!-- TODO: seu contato + links do Workana e Upwork -->
+Lucas Cabrera Perez
+lucas.cabreraperez5@gmail.com
+tel: 11 97294-4496
 
 ---
 ---
@@ -151,6 +161,10 @@ ou menos 1**.
 É uma solução de baixo custo que substitui channel managers e ferramentas de
 precificação pagas.
 
+<img width="739" height="1600" alt="WhatsApp Image 2026-08-19 at 19 10 49" src="https://github.com/user-attachments/assets/b34d0dbf-2aaa-428e-8104-cf894216992d" />
+
+*Uma mensagem de check-in que o sistema envia sozinho, 5 dias antes da chegada.*
+
 ## O problema
 
 Quem administra Airbnb / Booking perde horas todo dia respondendo hóspede,
@@ -165,7 +179,7 @@ toa: um agendamento diário, um webhook que chega, um tratador de erro e um
 leitor de e-mail são quatro trabalhos diferentes, e mantê-los separados deixa
 cada um fácil de testar e consertar sem mexer nos outros.
 
-![Visão da arquitetura](images/architecture.png)
+<img width="954" height="415" alt="architecture" src="https://github.com/user-attachments/assets/37a8fe26-41b1-43d2-bf7d-6d18feb20947" />
 
 | Arquivo do workflow | Módulo | Gatilho | Status |
 |---|---|---|---|
@@ -205,10 +219,14 @@ contato como confirmado.
 - Se a mensagem não tem código válido, recebe uma resposta automática pedindo reenvio, sem quebrar o fluxo
 - O WhatsApp passou a esconder o número real de contatos desconhecidos, então leio o número do próprio texto que o hóspede manda (opt-in)
 
+<img width="1158" height="380" alt="module-2-whatsapp" src="https://github.com/user-attachments/assets/1d66fcc6-a476-4337-abbb-377180f9b9c1" />
+
 ### Módulo 3: Alerta de erro global ✅
 Se qualquer workflow quebra, recebo um WhatsApp em segundos com o nome do
 workflow, o nó que falhou, a mensagem de erro e o link pra execução exata. Chega
 de descobrir três dias depois que as mensagens pararam de sair caladas.
+
+<img width="666" height="284" alt="module-3-error" src="https://github.com/user-attachments/assets/b8585cbc-c35d-4bba-a32a-30b0ed425949" />
 
 ### Módulo 4: Parser de e-mail 🚧
 Lê a caixa de entrada por IMAP e cria as reservas no Airtable direto dos e-mails
@@ -269,4 +287,7 @@ tratamento de erro e idempotência.
 ## Contato
 
 Automação freelance com n8n, focado em integrações WhatsApp, APIs REST e Airtable.
-<!-- TODO: seu contato + links do Workana e Upwork -->
+Lucas Cabrera Perez
+lucas.cabreraperez5@gmail.com
+tel: 11 97294-4496
+
